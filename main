@@ -1,0 +1,43 @@
+import cv2
+import time
+# Сделайте проверку на попадание метки в область на экране
+# квадрат 200 на 200 пикселей по центру изображения
+
+cap = cv2.VideoCapture('cam_video.mp4')
+
+while True:
+    ret, frame = cap.read()
+    if not ret:
+        break
+    yy, xx, _ = frame.shape
+    x1, y1, x2, y2 = int(xx/2 - 100), int(yy/2 - 100), int(xx/2 + 100), int(yy/2 + 100)
+    gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+    gray = cv2.GaussianBlur(gray, (21, 21), 0)
+
+    ret, thresh = cv2.threshold(gray, 105, 255, cv2.THRESH_BINARY_INV)
+
+    contours, hierarchy = cv2.findContours(thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
+
+    if len(contours) > 0:
+        c = max(contours, key=cv2.contourArea)
+        x, y, w, h = cv2.boundingRect(c)
+        cv2.rectangle(frame, (x, y), (x + w, y + h), (255, 0, 0), 2)
+        text = f"X = {x} Y = {y}"
+        cv2.putText(frame, text, (0, 0), cv2.FONT_HERSHEY_SIMPLEX, 0, (0, 255, 0))
+        if x1 <= x < x + w <= x2 and y1 < y < y + h <= y2:
+            color = (0, 255, 0)
+        elif (x1 <= x < x + w <= x2 and ((y < y1 < y + h < y2) or (y1 < y < y2 < y + h))) or \
+                (((x < x1 < x + w < x2) or (x1 < x < x2 < x + w)) and (y1 < y < y + h <= y2)) or \
+                (((x < x1 < x + w < x2) or (x1 < x < x2 < x + w)) and ((y < y1 < y + h < y2) or (y1 < y < y2 < y + h))):
+            color = (0, 255, 255)
+        else:
+            color = (0, 0, 255)
+        cv2.rectangle(frame, (x1, y1), (x2, y2), color, 2)
+
+    cv2.imshow('frame', frame)
+    if cv2.waitKey(1) & 0xFF == ord('q'):
+        break
+    time.sleep(0.1)
+
+cap.release()
+cv2.destroyAllWindows()
